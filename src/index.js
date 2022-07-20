@@ -1,24 +1,26 @@
 import './css/styles.css';
 import debounce from 'lodash.debounce';
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
+import fetchCountries from './fetchCountries';
 
 const DEBOUNCE_DELAY = 300;
 const countryInput = document.querySelector('#search-box');
 const countryList = document.querySelector('.country-list');
 const countryInfo = document.querySelector('.country-info');
 
-countryInput.addEventListener('input', onCountryInput);
-// countryInput.addEventListener('input', debounce(consoleLog, DEBOUNCE_DELAY));
+countryInput.addEventListener(
+  'input',
+  debounce(onCountryInput, DEBOUNCE_DELAY)
+);
 
-// function consoleLog() {
-//   return console.log('hahah');
-// }
-function fetchCountries(name) {
-  return fetch(`https://restcountries.com/v2/name/${name}`).then(response => {
-    if (!response.ok) {
-      throw new Error(response.status);
-    }
-    return response.json();
-  });
+function filterCountries(countries) {
+  if (countries.length > 2 && countries.length < 10) {
+    renderCountriesList(countries);
+  } else if (countries.length === 1) {
+    renderCountriesInfo(countries);
+  } else if (countries.length > 10) {
+    Notify.info('Too many matches found. Please enter a more specific name.');
+  }
 }
 
 function renderCountriesList(countries) {
@@ -51,18 +53,13 @@ function renderCountriesInfo(countries) {
   countryInfo.innerHTML = markup;
 }
 
-function restMarkup() {
-  countryInfo.innerHTML = '';
-}
-
-function onCountryInput(e) {
-  const inputValue = e.currentTarget.value;
-  if (inputValue === '') {
-    restMarkup();
+function onCountryInput() {
+  const inputValue = countryInput.value.trim();
+  if (inputValue !== '') {
+    fetchCountries(inputValue)
+      .then(countries => filterCountries(countries))
+      .catch(() => Notify.failure('Oops, there is no country with that name'));
   }
-  fetchCountries(inputValue)
-    // .then(countries => renderCountriesList(countries))
-    // потым ifom якщо ксть букв недостатня для пошуку тоды виводимо список коли стаэ достаттня - ынфу
-    .then(countries => renderCountriesInfo(countries))
-    .catch(error => console.log(error));
+  countryList.innerHTML = '';
+  countryInfo.innerHTML = '';
 }
